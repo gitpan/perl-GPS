@@ -2,19 +2,20 @@ use ExtUtils::MakeMaker;
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
 
-$DISTNAME     = 'perl-GPS', #GPS::Garmin';
 $AUTHOR       = 'Joao Pedro Goncalves <joaop@co.sapo.pt>';
 
 WriteMakefile(
-    'NAME'	=> $DISTNAME,
-    'VERSION'   => '0.13',
+    'NAME'	=> "GPS::Garmin",
+    'DISTNAME'  => "perl-GPS",
+    'VERSION'   => '0.14',
     'PREREQ_PM' => {
 	$^O eq 'MSWin32' ?
 		('Win32::SerialPort' => 0.07) :
 		('Device::SerialPort' => 0.07) # This is only a "COREQ"
 	},
     'PMLIBDIRS' => [qw(Garmin NMEA)],
-    'AUTHOR' => $AUTHOR,
+    'AUTHOR'    => $AUTHOR,
+    'NO_META'   => 1,
 );
 
 sub MY::postamble {
