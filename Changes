@@ -1,0 +1,18 @@
+Revision history for Perl extension GPS::Garmin.
+
+0.01  Fri Feb  5 15:28:24 1999
+        - original version; Lot's of bugs, lacks several functions
+
+0.02  Wed Feb 10 17:15:33 1999
+	- downloading tracks is now ok
+	- created some aliases to gps_do() stuff
+	- added some docs
+
+0.10  Qui Nov 30 02:59:16 WET 2000
+	- revamped
+
+0.12  Qua Dez  6 03:06:56 WET 2000
+	- added Win32 support (through Win32::SerialPort)
+	- added Device::SerialPort support
+	- added upload code
+	- optimized transfer speeds

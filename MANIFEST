@@ -1,0 +1,12 @@
+Changes				Changelog for the package
+Garmin.pm			Library for handling Garmin GPS receivers
+Serial.pm			Library for handling Garmin GPS receivers
+Garmin/Constant.pm  Garmin Constants	
+Garmin/Handler.pm  	Garmin data handler
+MANIFEST			This file
+Makefile.PL			Perl MakeMaker Makefile
+COPYING				GPL License
+README
+TODO
+eg/Borders.log		Test data
+eg/upload-test.pl	Sample script

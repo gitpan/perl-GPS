@@ -1,0 +1,24 @@
+GPS::Garmin 0.02   -- Initial Alpha Release   --  Fri Feb  5 15:28:24 1999
+
+This is a perl interface to a GPS receiver that allows the Garmin protocol.
+
+This is the first public release, several functions missing.
+Just wanting to know how many GPS geeks using perl are out there ;)
+
+You require perl 5.001 or later to use this library.
+
+You install the library by running these commands:
+
+   perl Makefile.PL
+   make
+   make install
+
+
+Please report any bugs/suggestions to Joao Gonçalves <joaop@iscsp.utl.pt>
+
+All files contained in this installation are Copyright (c) 1999 Joao Gonçalves
+unless otherwise specified. All rights reserved.
+
+This library is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
+
