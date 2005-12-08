@@ -1,5 +1,19 @@
 Revision history for Perl extension GPS::Garmin.
 
+0.15
+	- added support for some Garmin devices (eTrex vista/vista c,
+	  gecko)
+	- beginning support for route up/download
+	- documentation improvements
+	- use "weaken" to avoid circular references (and thus leaking
+	  filehandles, which could lead to blocking GPS up/downloads)
+	- "return_as_hash" feature
+	- all VERSIONs incremented to 1.something (which does not mean
+	  any improvements in stability)
+
+0.14
+	- no code changes, only administrativa
+
 0.13  Mi 28 Jan 2004 08:51:50 CET
 	- added support for newer Garmin devices: eTrex Venture and emap
 	- added optional /bin/stty support to Garmin::Serial

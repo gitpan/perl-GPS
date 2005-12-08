@@ -14,7 +14,7 @@ use vars qw($VERSION @ISA);
 
 @ISA = qw(GPS::Base GPS::Serial);
 
-$VERSION = '0.13';
+$VERSION = sprintf("%d.%02d", q$Revision: 1.30 $ =~ /(\d+)\.(\d+)/);
 
 #$|++; # XXX should not be here
 
@@ -164,8 +164,12 @@ sub get_product_id {
     $self->{software_version}	 = $result[1];
     $self->{product_description}     = $result[2];
 
-    if ($self->{product_id} == 154 || # etrex venture
-	$self->{product_id} == 111    # emap
+    if (   $self->{product_id} == 154 # etrex venture
+	|| $self->{product_id} == 169 # etrex vista
+	|| $self->{product_id} == 315 # etrex vista c
+	|| $self->{product_id} == 111 # emap
+	|| $self->{product_id} == 248 # gecko 201
+				      # XXX add more devices here ...
        ) {
 	$self->{handler} = GPS::Garmin::Handler::EtrexVenture->new($self);
     } else {
@@ -368,13 +372,13 @@ sub get_reply {
 
 	    my @data = $handler->$gcommand($command) if $handler->can($gcommand);
 ##XXX ??? $data[0] is normal data?!
-	    if ($gcommand !~ /^(Wpt|Trk)_data$/ && $data[0] == GRMN_ACK) {
+	    if ($gcommand !~ /^(?:Wpt|Trk|Rte)_(?:data|hdr)$/ && $data[0] == GRMN_ACK) {
 		next unless $command;
 	    }
 	    eval {alarm 0; };
 ##XXX ??? $data[0] is normal data?!
 #warn $gcommand;
-	    if ($gcommand !~ /^(Wpt|Trk)_data$/ && $data[0] == GRMN_NAK) {
+	    if ($gcommand !~ /^(?:Wpt|Trk|Rte)_(?:data|hdr)$/ && $data[0] == GRMN_NAK) {
 		print STDERR "First byte is NAK\n" if ($self->verbose);
 		return GRMN_NAK;
 	    }
@@ -399,35 +403,34 @@ GPS::Garmin - Perl interface to GPS equipment using the Garmin Protocol
 
 =head1 SYNOPSIS
 
-  use GPS::Garmin;
-  $gps = new GPS::Garmin(  'Port'      => '/dev/ttyS0',
-			   'Baud'      => 9600,
-		);
+    use GPS::Garmin;
+    $gps = new GPS::Garmin(  'Port'      => '/dev/ttyS0',
+			     'Baud'      => 9600,
+  		          );
 
 To transfer current position, and direction symbols:
 
-  ($latsign,$lat,$lonsign,$lon) = $gps->get_position;
+    ($latsign,$lat,$lonsign,$lon) = $gps->get_position;
 
 
 To transfer current time:
 
-  ($sec,$min,$hour,$mday,$mon,$year) = $gps->get_time;
+    ($sec,$min,$hour,$mday,$mon,$year) = $gps->get_time;
 
 
 To transfer trackpoints:
 
-$gps->prepare_transfer("trk");
-while($gps->records) {
+    $gps->prepare_transfer("trk");
+    while($gps->records) {
 	($lat,$lon,$time) = $gps->grab;
-}
+    }
 
 To transfer Waypoints:
 
-$gps->prepare_transfer("wpt");
-while($gps->records) {
+    $gps->prepare_transfer("wpt");
+    while($gps->records) {
 	($title,$lat,$lon,$desc) = $gps->grab;
-}
-
+    }
 
 =head1 DESCRIPTION
 
@@ -439,39 +442,52 @@ This module currently works with Garmin GPS II+ equipments,
 but should work on most Garmin receivers that support the GRMN/GRMN
 protocol.
 
-=over
-
 =head1 GETTING STARTED
 
 Make sure your GPS receiver is in host mode, GRMN/GRMN protocol.
 To start a connection in your script, just:
 
     use GPS::Garmin;
-	$gps = new GPS::Garmin (  'Port'      => '/dev/ttyS0',
-				  'Baud'      => 9600,
-			       ) or die "Unable to connect to receiver: $!";
+    $gps = new GPS::Garmin (  'Port'      => '/dev/ttyS0',
+	 		      'Baud'      => 9600,
+			      'Return'    => 'hash',
+			   ) or die "Unable to connect to receiver: $!";
 
-Where Port is the port that your GPS is connected to,
-and Baud the speed of connection ( default is 9600 bps).
+Where Port is the port that your GPS is connected to, and Baud the
+speed of connection ( default is 9600 bps).
+
+If Return is set to 'hash', then waypoints and tracks are returned as
+hashes, possibly containing more information. XXX This is not
+implemented completely for all data and device types. An undefined
+'Return' value would cause to return lists with basic information
+(latitude and longitude) instead.
 
 To know current coordinates:
 
-     ($latsign,$lat,$lnsign,$lon) = $gps->get_position;
+    ($latsign,$lat,$lnsign,$lon) = $gps->get_position;
 
-     $ltsign is "S" or "N" (South or North)
-     $lat is current latitude in degrees.minutes.
-     $lnsign is "W" or "E" (West or East)
-     $lon is current longitude in degrees.minutes.
+    $ltsign is "S" or "N" (South or North)
+    $lat is current latitude in degrees.minutes.
+    $lnsign is "W" or "E" (West or East)
+    $lon is current longitude in degrees.minutes.
 
 To transfer the track records:
 
-$gps->prepare_transfer("trk");
+    $gps->prepare_transfer("trk");
+    while($gps->records) {
+        ($lat,$lon,$time) = $gps->grab;
+    }
 
-while($gps->records) {
-    ($lat,$lon,$time) = $gps->grab;
-}
+C<$time> is in unix epoch seconds
 
-$time is in unix epoch seconds
+With C<< 'Return' => 'hash' >> this would be
+
+    $gps->prepare_transfer("trk");
+    while($gps->records) {
+        %trk_data = $gps->grab;
+    }
+
+instead.
 
 =head1 KNOWN LIMITATIONS
 
@@ -485,7 +501,7 @@ GNC 250XL   GNC 300
 GNC 300XL
 
 You can check you GPS capabilities by looking at the table in page 50 of the
-Garmin protocol specification at http://www.garmin.com/support/protocol.html
+Garmin protocol specification at L<http://www.garmin.com/support/protocol.html>
 
 - You need to have Win32::SerialPort to have GPS::Garmin working in Windows.
 

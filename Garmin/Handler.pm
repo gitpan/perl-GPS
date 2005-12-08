@@ -9,7 +9,7 @@ use vars qw($VERSION @ISA);
 
 use GPS::Garmin::Constant ':all';
 
-$VERSION = '0.13';
+$VERSION = sprintf("%d.%02d", q$Revision: 1.15 $ =~ /(\d+)\.(\d+)/);
 
 #$|++; # XXX should not be here...
 
@@ -17,8 +17,21 @@ $VERSION = '0.13';
 sub pi ()   { 4 * atan2(1, 1) } # 3.141592653...
 sub rad2deg { ($_[0]*180)/pi }
 
-sub new { bless { p => $_[1]}, $_[0] }
+sub new {
+    my($class, $p) = @_;
+    my $self = bless { p => $p }, $class;
+    if (eval { require Scalar::Util; Scalar::Util->import(qw(weaken)); 1 } ||
+	eval { require WeakRef; WeakRef->import(qw(weaken)); 1 }) {
+	weaken($self->{p}); # break self-reference
+    }
+    $self;
+}
+
 sub p   { $_[0]->{p} }
+
+# The Garmin documentation says 1.0e+25, but take floating point inaccuracies
+# into account.
+use constant UNDEF_FLOAT => 9.9e+24;
 
 #Fail
 sub Nak_byte {
@@ -32,6 +45,8 @@ sub Ack_byte {
     GRMN_ACK
 }
 
+# XXX use result_as_hash here too? But implementation of
+# GPS::Garmin::get_product_id would be more complex...
 sub Product_data {
     my ($data) = shift->p->read_packet;
     unpack("ssZ*",$data);
@@ -39,46 +54,62 @@ sub Product_data {
 
 sub Wpt_data_D103 {
     my $self = shift;
-    $self->p->{records}--;
-    my ($data) = $self->p->read_packet;
-    my (@ident,@comm,$lt,$ln);
+    my $p = $self->p;
+    $p->{records}--;
+    my ($data) = $p->read_packet;
 
-    #D103 Waypoint Datatype
     my $ident	= substr($data,0,6,'');
     my $comment = substr($data,12,40,'');
-    ($lt,$ln) =	 unpack("ll",$data);
-    $self->p->send_packet(GRMN_ACK);
+    my($lat,$lon) = unpack("ll",$data);
+    $lat = $p->semicirc_deg($lat);
+    $lon = $p->semicirc_deg($lon);
+    $p->send_packet(GRMN_ACK);
 
-    if($self->p->{records} == 0) { $self->p->get_reply; }
-    return ($ident,
-	    $self->p->semicirc_deg($lt),
-	    $self->p->semicirc_deg($ln),
-	    $comment
-	   );
+    if ($p->{records} == 0) { $p->get_reply }
+
+    if ($p->{return_as_hash}) {
+	(ident   => $ident,
+	 lat     => $lat,
+	 lon     => $lon,
+	 comment => $comment,
+	);
+    } else {
+	($ident, $lat, $lon, $comment);
+    }
 }
 
 sub Wpt_data_D108 {
-    my $self = shift;
-    $self->p->{records}--;
-    my ($data) = $self->p->read_packet;
+    my($self) = @_;
+    my $p = $self->p;
+    $p->{records}--;
+    my ($data) = $p->read_packet;
 
-    #D108 Waypoint Datatype
     my %res;
     @res{qw{wpt_class color dspl attr}} = unpack("C4", substr($data,0,4,''));
     $res{smbl} = unpack("s", substr($data,0,2,''));
     $res{subclass} = substr($data,0,18,''); # XXX chr(255)x18 == undef?
     my($lt,$ln) = unpack("ll", substr($data,0,4*2,''));
-    $res{lat} = $self->p->semicirc_deg($lt);
-    $res{lon} = $self->p->semicirc_deg($ln);
+    $res{lat} = $p->semicirc_deg($lt);
+    $res{lon} = $p->semicirc_deg($ln);
     @res{qw{alt dpth dist}} = unpack("f3", substr($data,0,4*3,''));
+    for (qw(alt dpth dist)) {
+	if ($res{$_} >= UNDEF_FLOAT) {
+	    $res{$_} = undef;
+	}
+    }
     $res{state} = unpack("a2", substr($data,0,2,''));
     $res{cc} = unpack("a2", substr($data,0,2,''));
     @res{qw{ident comment facility city addr cross_road}} = split /\0/, $data;
 
-    $self->p->send_packet(GRMN_ACK);
+    $p->send_packet(GRMN_ACK);
 
-    if($self->p->{records} == 0) { $self->p->get_reply; }
-    return @res{qw{ident lat lon comment}};
+    if ($p->{records} == 0) { $p->get_reply }
+
+    if ($p->{return_as_hash}) {
+	%res;
+    } else {
+	@res{qw{ident lat lon comment}};
+    }
 }
 
 sub pack_Wpt_data_D108 {
@@ -150,17 +181,18 @@ sub pack_Rte_wpt_data {
 
 sub Rte_link_data {
     my $self = shift;
-    $self->p->{records}--;
-    my ($data) = $self->p->read_packet;
+    my $p = $self->p;
+    $p->{records}--;
+    my ($data) = $p->read_packet;
 
     my %res;
     $res{class} = unpack("s", substr($data,0,2,''));
     $res{subclass} = unpack("a18", substr($data,0,18,''));
     $res{ident} = $data;
 
-    $self->p->send_packet(GRMN_ACK);
+    $p->send_packet(GRMN_ACK);
 
-    if($self->p->{records} == 0) { $self->p->get_reply; }
+    if($p->{records} == 0) { $p->get_reply; }
     return %res;
 }
 
@@ -178,6 +210,7 @@ sub pack_Rte_link_data {
     $s;
 }
 
+# XXX use return_as_hash
 sub Almanac_data {
     my $self = shift;
     $self->p->{records}--;
@@ -195,55 +228,78 @@ sub Almanac_data {
 
 sub Trk_hdr_D310 {
     my $self = shift;
-    $self->p->{records}--;
-    my ($data) = $self->p->read_packet;
+    my $p = $self->p;
+    $p->{records}--;
+    my ($data) = $p->read_packet;
 
     my %res;
     $res{dspl}      = unpack("c", substr($data,0,1));
     $res{color}     = unpack("C", substr($data,1,1));
     $res{trk_ident} = unpack("Z*", substr($data,2));
 
-    $self->p->send_packet(GRMN_ACK);
-    if($self->p->{records} == 0) { $self->p->get_reply; }
+    $p->send_packet(GRMN_ACK);
+    if ($p->{records} == 0) { $p->get_reply }
     return %res;
 }
 
 sub Trk_data_D300 {
     my $self = shift;
-    $self->p->{records}--;
-    my ($data) = $self->p->read_packet;
+    my $p = $self->p;
+    $p->{records}--;
+    my ($data) = $p->read_packet;
     my (@ident,@comm,$lt,$ln);
 
     #D300 Track Point Datatype
     my ($lat,$lon,$time,$is_first) = unpack('llLb',$data);
-    $lat = $self->p->semicirc_deg($lat);
-    $lon = $self->p->semicirc_deg($lon);
+    $lat = $p->semicirc_deg($lat);
+    $lon = $p->semicirc_deg($lon);
     $time += GRMN_UTC_DIFF;
 
-    $self->p->send_packet(GRMN_ACK);
-    if($self->p->{records} == 0) { $self->p->get_reply; }
-    return($lat,$lon,$time);
+    $p->send_packet(GRMN_ACK);
+    if($p->{records} == 0) { $p->get_reply; }
+    if ($p->{return_as_hash}) {
+	(lat  => $lat,
+	 lon  => $lon,
+	 time => $time,
+	);
+    } else {
+	($lat, $lon, $time);
+    }
 }
 
 sub Trk_data_D301 {
     my $self = shift;
-    $self->p->{records}--;
-    my ($data) = $self->p->read_packet;
+    my $p = $self->p;
+    $p->{records}--;
+    my ($data) = $p->read_packet;
     my (@ident,@comm,$lt,$ln);
 
     # D301 Track Point Datatype
-    my ($lat,$lon,$time,$alt,$dpth,$is_first) = unpack('llLffb',$data);
-    $lat = $self->p->semicirc_deg($lat);
-    $lon = $self->p->semicirc_deg($lon);
+    my ($lat,$lon,$time,$alt,$dpth,$new_trk) = unpack('llLffb',$data);
+    $lat = $p->semicirc_deg($lat);
+    $lon = $p->semicirc_deg($lon);
     if ($time == 0xffffffff) { # XXX check
 	undef $time;
     } else {
 	$time += GRMN_UTC_DIFF;
     }
+    if ($dpth >= UNDEF_FLOAT) { $dpth = undef }
+    if ($alt  >= UNDEF_FLOAT) { $alt = undef }
 
-    $self->p->send_packet(GRMN_ACK);
-    if($self->p->{records} == 0) { $self->p->get_reply; }
-    return($lat,$lon,$time,$alt,$dpth,$is_first);
+    $p->send_packet(GRMN_ACK);
+    if ($p->{records} == 0) { $p->get_reply }
+
+    if ($p->{return_as_hash}) {
+	(lat     => $lat,
+	 lon     => $lon,
+	 time    => $time,
+	 alt     => $alt,
+	 dpth    => $dpth,
+	 new_trk => $new_trk,
+	);
+    } else {
+	($lat, $lon, $time, $alt, $dpth, $new_trk);
+    }
 }
 
 sub pack_Trk_data_D301 {
@@ -384,7 +440,7 @@ GPS::Garmin::Handler - Handlers to Garmin data
 
 =head1 SYNOPSIS
 
-  use GPS::Handler;
+  use GPS::Garmin::Handler;
 
 
 =head1 DESCRIPTION

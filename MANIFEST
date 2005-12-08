@@ -12,3 +12,4 @@ COPYING				GPL License
 README
 TODO
 t/base.t
+t/connect.t

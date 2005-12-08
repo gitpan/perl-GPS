@@ -4,6 +4,8 @@
 
 package GPS::Garmin::Constant;
 
+$VERSION = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
+
 require Exporter;
 @ISA = ("Exporter");
 

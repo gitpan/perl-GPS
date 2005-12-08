@@ -1,7 +1,7 @@
 # -*- perl -*-
 
 #
-# $Id: Base.pm,v 1.2 2003/05/16 18:17:46 eserte Exp $
+# $Id: Base.pm,v 1.3 2004/09/25 22:27:09 eserte Exp $
 # Author: Slaven Rezic
 #
 # Copyright (C) 2003 Slaven Rezic. All rights reserved.
@@ -16,7 +16,7 @@ package GPS::Base;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
 
 # Factory
 sub new {
@@ -53,6 +53,10 @@ sub common_new {
 	'protocol'   =>	 $protocol,
 	'timeout'    =>	 $timeout,
 	'verbose'    =>	 $param{verbose},
+	(exists $param{'Return'} && $param{'Return'} eq 'hash'
+	 ? (return_as_hash => 1)
+	 : ()
+	),
     }, $type;
 
     $self->connect unless $param{do_not_init};

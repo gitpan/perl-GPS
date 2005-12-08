@@ -7,7 +7,7 @@ package GPS::Serial;
 use strict;
 use vars qw($VERSION $OS_win $has_serialport $stty_path);
 
-$VERSION = '0.13';
+$VERSION = sprintf("%d.%02d", q$Revision: 1.16 $ =~ /(\d+)\.(\d+)/);
 
 BEGIN {
     #Taken from SerialPort/eg/any_os.plx

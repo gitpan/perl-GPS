@@ -7,7 +7,7 @@ package GPS::NMEA::Handler;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '0.12';
+$VERSION = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
 
 use POSIX qw(:termios_h);
 use FileHandle;

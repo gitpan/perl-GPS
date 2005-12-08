@@ -10,18 +10,15 @@ use GPS::NMEA::Handler ();
 
 use strict;
 use Carp;
-#no strict "subs";
 use vars qw($VERSION @ISA);
 
 require Exporter;
 
 @ISA = qw(GPS::Base GPS::Serial GPS::NMEA::Handler);
 
-$VERSION = '0.13';
+$VERSION = sprintf("%d.%02d", q$Revision: 1.9 $ =~ /(\d+)\.(\d+)/);
 
 use FileHandle;
-
-#$|++;
 
 sub new {
     my $class = shift;
@@ -53,7 +50,11 @@ sub parse {
     ($short_cmd = $cmd) =~ s/^\$//;
 
     print "COMMAND: $short_cmd ($line)\n" if $self->verbose;
-    $self->$short_cmd($line);	# if $self->can($short_cmd);
+    if ($self->can($short_cmd)) {
+	$self->$short_cmd($line);
+    } elsif ($self->verbose) {
+	print "Can't handle $short_cmd\n";
+    } 
     $short_cmd;
 }
 
@@ -154,6 +155,39 @@ GPS::NMEA allows the connection and use of of a GPS receiver in perl scripts.
 =head1 BUGS
 
 
+=head1 EXAMPLES
+
+Get the position periodically:
+
+    #!/usr/bin/perl
+    use GPS::NMEA;
+    
+    my $gps = GPS::NMEA->new(Port => '/dev/cuaa0', # or COM5: or /dev/ttyS0
+    			     Baud => 4800);
+    while(1) {
+        my($ns,$lat,$ew,$lon) = $gps->get_position;
+        print "($ns,$lat,$ew,$lon)\n";
+    }
+
+Get the internal NMEA dump:
+
+    #!/usr/bin/perl
+    use GPS::NMEA;
+    use Data::Dumper;
+    
+    my $gps = GPS::NMEA->new(Port => '/dev/cuaa0', # or COM5: or /dev/ttyS0
+    			     Baud => 4800);
+    while(1) {
+        $gps->parse;
+    
+	# Dump internal NMEA data:
+        $gps->nmea_data_dump;
+    
+        # Alternative to look at the internal NMEA data:
+        require Data::Dumper;
+        print Data::Dumper->new([$gps->{NMEADATA}],[])->Indent(1)->Useqq(1)->Dump;
+    }
+    __END__
 
 =head1 AUTHOR
 
