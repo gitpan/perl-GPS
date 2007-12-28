@@ -14,7 +14,7 @@ use vars qw($VERSION @ISA);
 
 @ISA = qw(GPS::Base GPS::Serial);
 
-$VERSION = sprintf("%d.%02d", q$Revision: 1.30 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q$Revision: 1.33 $ =~ /(\d+)\.(\d+)/);
 
 #$|++; # XXX should not be here
 
@@ -164,11 +164,15 @@ sub get_product_id {
     $self->{software_version}	 = $result[1];
     $self->{product_description}     = $result[2];
 
-    if (   $self->{product_id} == 154 # etrex venture
-	|| $self->{product_id} == 169 # etrex vista
-	|| $self->{product_id} == 315 # etrex vista c
-	|| $self->{product_id} == 111 # emap
-	|| $self->{product_id} == 248 # gecko 201
+    if (   $self->{product_id} == 694 # etrex vista hcx
+       ) {
+	$self->{handler} = GPS::Garmin::Handler::EtrexVistaHCx->new($self);
+    } elsif (   $self->{product_id} == 154 # etrex venture
+	     || $self->{product_id} == 169 # etrex vista
+	     || $self->{product_id} == 315 # etrex vista c
+	     || $self->{product_id} == 111 # emap
+	     || $self->{product_id} == 248 # gecko 201
+	     || $self->{product_id} == 292 # GPSmap 60CSx
 				      # XXX add more devices here ...
        ) {
 	$self->{handler} = GPS::Garmin::Handler::EtrexVenture->new($self);

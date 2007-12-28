@@ -2,7 +2,7 @@
 # -*- perl -*-
 
 #
-# $Id: connect.t,v 1.2 2005/12/08 11:08:42 eserte Exp $
+# $Id: connect.t,v 1.4 2006/11/26 08:14:40 eserte Exp $
 # Author: Slaven Rezic
 #
 
@@ -26,7 +26,7 @@ eval {
     my $gps = GPS::Garmin->new(timeout => 1);
 };
 my $error = $@;
-ok($error eq '' || $error =~ /(timed out|can't open)/i, "Timeout of device or no error")
+ok($error eq '' || $error =~ /(timed out|can't open|permission denied|Operation not supported)/i, "Timeout of device, no permission to port or no error")
     or diag $error;
 
 __END__

@@ -16,7 +16,7 @@ require Exporter;
 
 @ISA = qw(GPS::Base GPS::Serial GPS::NMEA::Handler);
 
-$VERSION = sprintf("%d.%02d", q$Revision: 1.9 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q$Revision: 1.10 $ =~ /(\d+)\.(\d+)/);
 
 use FileHandle;
 
@@ -143,6 +143,8 @@ GPS::NMEA - Perl interface to GPS equipment using the NMEA Protocol
 =head1 DESCRIPTION
 
 GPS::NMEA allows the connection and use of of a GPS receiver in perl scripts.
+
+Note that latitudes and longitudes are in DMM format.
 
 =over
 

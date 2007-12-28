@@ -1,7 +1,7 @@
 # -*- perl -*-
 
 #
-# $Id: Base.pm,v 1.3 2004/09/25 22:27:09 eserte Exp $
+# $Id: Base.pm,v 1.4 2006/09/09 16:57:15 eserte Exp $
 # Author: Slaven Rezic
 #
 # Copyright (C) 2003 Slaven Rezic. All rights reserved.
@@ -16,7 +16,7 @@ package GPS::Base;
 
 use strict;
 use vars qw($VERSION);
-$VERSION = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
 
 # Factory
 sub new {
@@ -39,7 +39,10 @@ sub common_new {
 	($^O eq 'MSWin32'
 	 ? 'COM1'
 	 : ($^O =~ /^(?:(?:free|net|open)bsd|bsd(?:os|i))$/
-	    ? '/dev/cuaa0'
+	    ? (-e '/dev/cuad0'
+	       ? '/dev/cuad0' # FreeBSD 6.x and later
+	       : '/dev/cuaa0'
+	      )
 	    : '/dev/ttyS1'
 	   )
 	);

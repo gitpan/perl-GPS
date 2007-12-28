@@ -15,7 +15,7 @@ if (eval { require Scalar::Util; 1} ||
 WriteMakefile(
     'NAME'	=> "GPS::Garmin",
     'DISTNAME'  => "perl-GPS",
-    'VERSION'   => '0.15',
+    'VERSION'   => '0.15_91',
     'PREREQ_PM' => {
 	$^O eq 'MSWin32' ?
 		('Win32::SerialPort' => 0.07) :
@@ -36,6 +36,7 @@ sub MY::postamble {
     <<'EOF';
 release: sf-release cpan-release
 
+# Does not work for me (eserte)
 sf-release:
 	[ -e $(DISTVNAME).tar$(SUFFIX) ]
 	sf-upload -pr perl-gps -p perl-gps -f $(DISTVNAME).tar$(SUFFIX)
@@ -43,6 +44,11 @@ sf-release:
 cpan-release:
 	[ -e $(DISTVNAME).tar$(SUFFIX) ]
 	cpan-upload $(DISTVNAME).tar$(SUFFIX)
+
+cvs-release-tag:
+	@echo "Release create cvs tag RELEASE_$(VERSION_SYM) ?"
+	@read yn
+	cvs tag RELEASE_$(VERSION_SYM)
 
 EOF
 }

@@ -13,3 +13,7 @@ README
 TODO
 t/base.t
 t/connect.t
+examples/Borders.log
+examples/check-port.pl
+examples/upload-test.pl
+examples/upload-wpt-test.pl

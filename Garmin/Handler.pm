@@ -9,7 +9,7 @@ use vars qw($VERSION @ISA);
 
 use GPS::Garmin::Constant ':all';
 
-$VERSION = sprintf("%d.%02d", q$Revision: 1.15 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q$Revision: 1.16 $ =~ /(\d+)\.(\d+)/);
 
 #$|++; # XXX should not be here...
 
@@ -51,6 +51,9 @@ sub Product_data {
     my ($data) = shift->p->read_packet;
     unpack("ssZ*",$data);
 }
+
+######################################################################
+# Waypoints
 
 sub Wpt_data_D103 {
     my $self = shift;
@@ -112,6 +115,51 @@ sub Wpt_data_D108 {
     }
 }
 
+sub _Wpt_data_D109_and_better {
+    my($self) = @_;
+    my $p = $self->p;
+    $p->{records}--;
+    my ($data) = $p->read_packet;
+
+    my %res;
+    @res{qw{dtyp wpt_class dspl_color attr}} = unpack("C4", substr($data,0,4,''));
+    $res{color} = $res{dspl_color} & 0x1f;
+    $res{dspl} = ($res{dspl_color} >> 5) & 0x3;
+    $res{smbl} = unpack("s", substr($data,0,2,''));
+    $res{subclass} = substr($data,0,18,''); # XXX chr(255)x18 == undef?
+    my($lt,$ln) = unpack("ll", substr($data,0,4*2,''));
+    $res{lat} = $p->semicirc_deg($lt);
+    $res{lon} = $p->semicirc_deg($ln);
+    @res{qw{alt dpth dist}} = unpack("f3", substr($data,0,4*3,''));
+    for (qw(alt dpth dist)) {
+	if ($res{$_} >= UNDEF_FLOAT) {
+	    $res{$_} = undef;
+	}
+    }
+    $res{state} = unpack("a2", substr($data,0,2,''));
+    $res{cc} = unpack("a2", substr($data,0,2,''));
+    $res{ete} = unpack("l", substr($data,0,4,''));
+    if ($res{attr} == 0x80) { # D110
+	$res{temp} = unpack("f", substr($data,0,4,''));
+	$res{time} = unpack("l", substr($data,0,4,''));
+	$res{wpt_cat} = unpack("s", substr($data,0,2,''));
+    }
+    @res{qw{ident comment facility city addr cross_road}} = split /\0/, $data;
+
+    $p->send_packet(GRMN_ACK);
+
+    if ($p->{records} == 0) { $p->get_reply }
+
+    if ($p->{return_as_hash}) {
+	%res;
+    } else {
+	@res{qw{ident lat lon comment}};
+    }
+}
+
+sub Wpt_data_D109 { shift->_Wpt_data_D109_and_better(@_) }
+sub Wpt_data_D110 { shift->_Wpt_data_D109_and_better(@_) }
+
 sub pack_Wpt_data_D108 {
     my $self = shift;
     my $d = shift;
@@ -142,6 +190,71 @@ sub pack_Wpt_data_D108 {
     $s .= join("\0", @d{qw{ident comment facility city addr cross_road}});
     $s;
 }
+
+sub _pack_Wpt_data_D109_and_better {
+    my $self = shift;
+    my $d = shift;
+    my %d = %$d;
+    die "dtyp not set" if !exists $d{dtyp};
+    $d{wpt_class} = 0 unless defined $d{wpt_class};
+    $d{color} = 255 unless defined $d{color};
+    $d{dspl} = 0 unless defined $d{dspl};
+    $d{dspl_color} = ($d{color} & 0x1f) | (($d{dspl} & 0x3) << 5);
+    $d{smbl} = 8246 unless defined $d{smbl};
+    foreach my $key (qw(alt dpth dist)) {
+	$d{$key} = 1.0e25 unless defined $d{$key};
+    }
+    foreach my $key (qw(state cc)) {
+	$d{$key} = "  " unless defined $d{$key};
+    }
+    $d{ete} = 0xffffffff if !defined $d{ete};
+    if ($d{datatype} eq 'D110') {
+	$d{temp} = 1.0e25 unless defined $d{temp};
+	$d{time} = 0xFFFFFFFF unless defined $d{time};
+	$d{wpt_cat} = 0 unless defined $d{wpt_cat};
+    }
+    foreach my $key (qw(ident comment facility city addr cross_road)) {
+	$d{$key} = "" unless defined $d{$key};
+    }
+    if ($d{ident} eq '') {
+	die "ident not defined";
+    }
+    die "lat or lon not defined" if !defined $d{lat} || !defined $d{lon};
+    my $s = pack("C4s", @d{qw{dtyp wpt_class dspl_color attr smbl}});
+    $s .= chr(255)x18; # subclass
+    $s .= pack("ll", $self->p->deg_semicirc($d{lat}), $self->p->deg_semicirc($d{lon}));
+    $s .= pack("f3", @d{qw{alt dpth dist}});
+    $s .= pack("A2A2", @d{qw{state cc}});
+    $s .= pack("l", $d{ete});
+    if ($d{datatype} eq 'D110') {
+	$s .= pack("f", $d{temp});
+	$s .= pack("l", $d{time});
+	$s .= pack("s", $d{wpt_cat});
+    }
+    $s .= join("\0", @d{qw{ident comment facility city addr cross_road}});
+    $s;
+}
+
+sub pack_Wpt_data_D109 {
+    my($self, $d) = @_;
+    my %d = %$d;
+    $d{datatype} = "D109";
+    $d{dtyp} = 1; # 0x1 for D109
+    $d{attr} = 0x70;
+    $self->_pack_Wpt_data_D109_and_better(\%d);
+}
+
+sub pack_Wpt_data_D110 {
+    my($self, $d) = @_;
+    my %d = %$d;
+    $d{datatype} = "D110";
+    $d{dtyp} = 1; # 0x1 for D110
+    $d{attr} = 0x80;
+    $self->_pack_Wpt_data_D109_and_better(\%d);
+}
+
+######################################################################
+# Routes
 
 sub Rte_hdr {
     my $self = shift;
@@ -210,6 +323,9 @@ sub pack_Rte_link_data {
     $s;
 }
 
+######################################################################
+# Almanac
+
 # XXX use return_as_hash
 sub Almanac_data {
     my $self = shift;
@@ -225,6 +341,9 @@ sub Almanac_data {
     if($self->p->{records} == 0) { $self->p->get_reply; }
     return($wn,$toa,$af0,$af1,$e,$sqrta,$m0,$w,$omg0,$odot,$i,$htlh);
 }
+
+######################################################################
+# Tracks
 
 sub Trk_hdr_D310 {
     my $self = shift;
@@ -332,6 +451,8 @@ sub pack_Trk_hdr_D310 {
     $s;
 }
 
+######################################################################
+
 sub Xfer_cmplt {
     my $self = shift;
     delete $self->p->{records};
@@ -409,6 +530,8 @@ sub Records {
     return $numrec;
 }
 
+######################################################################
+
 package GPS::Garmin::Handler::Generic;
 use vars qw(@ISA);
 @ISA = qw(GPS::Garmin::Handler);
@@ -418,6 +541,8 @@ sub Trk_data { shift->Trk_data_D300(@_) }
 sub pack_Wpt_data { shift->pack_Wpt_data_D103(@_) }
 sub pack_Trk_data { shift->pack_Trk_data_D300(@_) }
 
+######################################################################
+
 package GPS::Garmin::Handler::EtrexVenture;
 use vars qw(@ISA);
 @ISA = qw(GPS::Garmin::Handler);
@@ -426,6 +551,19 @@ sub Wpt_data { shift->Wpt_data_D108(@_) }
 sub Trk_data { shift->Trk_data_D301(@_) }
 sub Trk_hdr  { shift->Trk_hdr_D310(@_) }
 sub pack_Wpt_data { shift->pack_Wpt_data_D108(@_) }
+sub pack_Trk_data { shift->pack_Trk_data_D301(@_) }
+sub pack_Trk_hdr { shift->pack_Trk_hdr_D310(@_) }
+
+######################################################################
+
+package GPS::Garmin::Handler::EtrexVistaHCx;
+use vars qw(@ISA);
+@ISA = qw(GPS::Garmin::Handler);
+
+sub Wpt_data { shift->Wpt_data_D110(@_) }
+sub Trk_data { shift->Trk_data_D301(@_) }
+sub Trk_hdr  { shift->Trk_hdr_D310(@_) }
+sub pack_Wpt_data { shift->pack_Wpt_data_D110(@_) }
 sub pack_Trk_data { shift->pack_Trk_data_D301(@_) }
 sub pack_Trk_hdr { shift->pack_Trk_hdr_D310(@_) }
 

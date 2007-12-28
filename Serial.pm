@@ -7,7 +7,7 @@ package GPS::Serial;
 use strict;
 use vars qw($VERSION $OS_win $has_serialport $stty_path);
 
-$VERSION = sprintf("%d.%02d", q$Revision: 1.16 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q$Revision: 1.17 $ =~ /(\d+)\.(\d+)/);
 
 BEGIN {
     #Taken from SerialPort/eg/any_os.plx
@@ -57,6 +57,11 @@ sub _read {
 
     if ($self->{verbose} && $buf) {
 	print STDERR "R:(",join(" ", map {$self->Pid_Byte($_)}unpack("C*",$buf)),")\n";
+    } else {
+	# Strange: this delay is necessary, otherwise nothing works
+	# (seen on a slow Debian machine with Garmin Vista)
+	# Turning on verbose output also helps
+	$self->usleep(1);
     }
 
     return $buf;
