@@ -7,7 +7,7 @@ package GPS::Serial;
 use strict;
 use vars qw($VERSION $OS_win $has_serialport $stty_path);
 
-$VERSION = sprintf("%d.%02d", q$Revision: 1.17 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q$Revision: 1.18 $ =~ /(\d+)\.(\d+)/);
 
 BEGIN {
     #Taken from SerialPort/eg/any_os.plx
@@ -74,7 +74,7 @@ sub _readline {
     #if NMEA is the chosen protocol
 
     my ($self) = @_;
-    my $line;
+    my $line = '';
     $self->serial or warn "Read from an uninitialized handle";
 
     local $SIG{ALRM} = sub {die "GPS Device has timed out\n"};

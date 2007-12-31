@@ -1,5 +1,14 @@
 Revision history for Perl extension GPS::Garmin.
 
+0.16-TOBE
+	- added more support for some Garmin devices (eTrex vista hcx)
+	- added an additional delay in readline
+	- changed default serial device for FreeBSD 6.x
+	- added examples to distribution
+	- new nmea.t test
+	- in connect.t test, check for more connection errors
+	- some warning fixes
+
 0.15
 	- added support for some Garmin devices (eTrex vista/vista c,
 	  gecko)

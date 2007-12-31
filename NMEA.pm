@@ -16,7 +16,7 @@ require Exporter;
 
 @ISA = qw(GPS::Base GPS::Serial GPS::NMEA::Handler);
 
-$VERSION = sprintf("%d.%02d", q$Revision: 1.10 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%02d", q$Revision: 1.11 $ =~ /(\d+)\.(\d+)/);
 
 use FileHandle;
 
@@ -117,7 +117,7 @@ sub nmea_data_dump {
 sub checksum {
     my ($self,$line) = @_;
     my $csum = 0;
-    $csum ^= unpack("C",(substr($line,$_,1))) for(1..length($line));
+    $csum ^= unpack("C",(substr($line,$_,1))) for(1..length($line)-1);
 
     print "Checksum: $csum\n" if $self->verbose;
     return (sprintf("%2.2X",$csum));

@@ -13,6 +13,7 @@ README
 TODO
 t/base.t
 t/connect.t
+t/nmea.t
 examples/Borders.log
 examples/check-port.pl
 examples/upload-test.pl
