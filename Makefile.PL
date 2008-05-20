@@ -15,7 +15,7 @@ if (eval { require Scalar::Util; 1} ||
 WriteMakefile(
     'NAME'	=> "GPS::Garmin",
     'DISTNAME'  => "perl-GPS",
-    'VERSION'   => '0.15_92',
+    'VERSION'   => '0.16',
     'PREREQ_PM' => {
 	$^O eq 'MSWin32' ?
 		('Win32::SerialPort' => 0.07) :
@@ -33,7 +33,9 @@ WriteMakefile(
 );
 
 sub MY::postamble {
-    <<'EOF';
+    my $postamble = "";
+    if ($^O ne 'MSWin32') {
+	$postamble .= <<'EOF';
 release: sf-release cpan-release
 
 # Does not work for me (eserte)
@@ -51,4 +53,6 @@ cvs-release-tag:
 	cvs tag RELEASE_$(VERSION_SYM)
 
 EOF
+    }
+    $postamble;
 }
