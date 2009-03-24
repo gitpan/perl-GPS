@@ -1,5 +1,9 @@
 Revision history for Perl extension GPS::Garmin.
 
+0.17
+	- support for etrex yellow (patch by Ulrich Habel)
+	- GPS::NMEA: refactored parse_line out of parse
+
 0.16
 	- added more support for some Garmin devices (eTrex vista hcx)
 	- added an additional delay in readline

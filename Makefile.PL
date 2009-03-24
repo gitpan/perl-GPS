@@ -15,7 +15,7 @@ if (eval { require Scalar::Util; 1} ||
 WriteMakefile(
     'NAME'	=> "GPS::Garmin",
     'DISTNAME'  => "perl-GPS",
-    'VERSION'   => '0.16',
+    'VERSION'   => '0.17',
     'PREREQ_PM' => {
 	$^O eq 'MSWin32' ?
 		('Win32::SerialPort' => 0.07) :

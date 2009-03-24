@@ -16,7 +16,7 @@ require Exporter;
 
 @ISA = qw(GPS::Base GPS::Serial GPS::NMEA::Handler);
 
-$VERSION = sprintf("%d.%02d", q$Revision: 1.11 $ =~ /(\d+)\.(\d+)/);
+$VERSION = 1.12;
 
 use FileHandle;
 
@@ -34,7 +34,14 @@ sub new {
 sub parse {
     my $self = shift;
     my $line = $self->_readline; #from GPS::Serial
+    while () {
+	my $short_cmd = $self->parse_line($line);
+	return $short_cmd if defined $short_cmd;
+    }
+}
 
+sub parse_line {
+    my($self, $line) = @_;
     my ($csum,$cmd,$short_cmd);
 
     #remove trailing chars
@@ -43,7 +50,8 @@ sub parse {
     #Test checksum
     if ($line =~  s/\*(\w\w)$//) {
 	$csum = $1;
-	return $self->parse(@_) unless $csum eq $self->checksum($line);
+	#XXX del? return $self->parse(@_) unless $csum eq $self->checksum($line);
+	return undef unless $csum eq $self->checksum($line);
     }
 
     $cmd = (split ',',$line)[0];
